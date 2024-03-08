@@ -1,0 +1,50 @@
+---
+source: src/scanner.rs
+expression: tokens
+---
+[
+    Token {
+        type: Var,
+        lexeme: "var",
+        literal: None,
+        line: 1,
+    },
+    Token {
+        type: Identifier,
+        lexeme: "x",
+        literal: Some(
+            String(
+                "x",
+            ),
+        ),
+        line: 1,
+    },
+    Token {
+        type: EqualEqual,
+        lexeme: "=",
+        literal: None,
+        line: 1,
+    },
+    Token {
+        type: Number,
+        lexeme: "10",
+        literal: Some(
+            Number(
+                10.0,
+            ),
+        ),
+        line: 1,
+    },
+    Token {
+        type: Semicolon,
+        lexeme: ";",
+        literal: None,
+        line: 1,
+    },
+    Token {
+        type: Eof,
+        lexeme: ";",
+        literal: None,
+        line: 1,
+    },
+]

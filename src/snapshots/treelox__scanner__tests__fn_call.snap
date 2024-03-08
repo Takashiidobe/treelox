@@ -1,0 +1,64 @@
+---
+source: src/scanner.rs
+expression: tokens
+---
+[
+    Token {
+        type: Fun,
+        lexeme: "fun",
+        literal: None,
+        line: 1,
+    },
+    Token {
+        type: LeftParen,
+        lexeme: "(",
+        literal: None,
+        line: 1,
+    },
+    Token {
+        type: RightParen,
+        lexeme: ")",
+        literal: None,
+        line: 1,
+    },
+    Token {
+        type: LeftBrace,
+        lexeme: "{",
+        literal: None,
+        line: 1,
+    },
+    Token {
+        type: Print,
+        lexeme: "print",
+        literal: None,
+        line: 1,
+    },
+    Token {
+        type: Number,
+        lexeme: "10",
+        literal: Some(
+            Number(
+                10.0,
+            ),
+        ),
+        line: 1,
+    },
+    Token {
+        type: Semicolon,
+        lexeme: ";",
+        literal: None,
+        line: 1,
+    },
+    Token {
+        type: RightBrace,
+        lexeme: "}",
+        literal: None,
+        line: 1,
+    },
+    Token {
+        type: Eof,
+        lexeme: "}",
+        literal: None,
+        line: 1,
+    },
+]
