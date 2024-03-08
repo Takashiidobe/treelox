@@ -1,0 +1,39 @@
+---
+source: src/parser.rs
+expression: parser.parse()
+---
+Some(
+    Binary {
+        left: Grouping {
+            expr: Binary {
+                left: Literal {
+                    value: Number(
+                        5.0,
+                    ),
+                },
+                operator: Token {
+                    type: Minus,
+                    lexeme: "-",
+                    literal: None,
+                    line: 1,
+                },
+                right: Literal {
+                    value: Number(
+                        3.0,
+                    ),
+                },
+            },
+        },
+        operator: Token {
+            type: Star,
+            lexeme: "*",
+            literal: None,
+            line: 1,
+        },
+        right: Literal {
+            value: Number(
+                4.0,
+            ),
+        },
+    },
+)

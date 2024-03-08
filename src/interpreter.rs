@@ -1,6 +1,6 @@
 use std::{fs::read_to_string, io, process};
 
-use crate::scanner::Scanner;
+use crate::{expr::AstPrinter, parser::Parser, scanner::Scanner};
 
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct Interpreter {
@@ -50,26 +50,19 @@ impl Interpreter {
     fn run(&mut self, source: String) -> Scanner {
         let mut scanner = Scanner::new(source);
         let tokens = scanner.scan_tokens();
+        let mut parser = Parser::new(tokens);
+        let expr = parser.parse();
+        dbg!(&expr);
 
-        for token in tokens {
-            println!("{:?}", token);
+        match expr {
+            Some(expr) => {
+                AstPrinter.print(expr);
+            }
+            None => {
+                panic!("Error while scanning tokens");
+            }
         }
+
         scanner
-    }
-}
-
-#[derive(Default, Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
-pub struct Errors {
-    pub had_error: bool,
-}
-
-impl Errors {
-    pub fn error(&mut self, line: usize, message: &str) {
-        self.report(line, "", message);
-    }
-
-    pub fn report(&mut self, line: usize, loc: &str, message: &str) {
-        eprintln!("[line {}] Error {}: {}", line, loc, message);
-        self.had_error = true;
     }
 }

@@ -1,0 +1,11 @@
+---
+source: src/parser.rs
+expression: parser.parse()
+---
+Some(
+    Literal {
+        value: Bool(
+            true,
+        ),
+    },
+)

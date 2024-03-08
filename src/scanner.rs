@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 
-use crate::{
-    interpreter::Errors,
-    token::{Object, Token, TokenType},
-};
+use crate::errors::Errors;
+use crate::token::{Object, Token, TokenType};
 
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct Scanner {
