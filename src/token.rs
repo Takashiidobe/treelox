@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TokenType {
     // Single character tokens
@@ -60,4 +62,14 @@ pub enum Object {
     String(String),
     Number(f64),
     Identifier(String),
+}
+
+impl fmt::Display for Object {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Object::String(str) => f.write_str(str),
+            Object::Number(num) => f.write_str(&num.to_string()),
+            Object::Identifier(ident) => f.write_str(ident),
+        }
+    }
 }
