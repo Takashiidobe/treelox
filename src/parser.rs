@@ -24,41 +24,41 @@ impl Parser {
         if self.errors.had_error {
             None
         } else {
-            Some(res)
+            res
         }
     }
 
-    fn expression(&mut self) -> Expr {
+    fn expression(&mut self) -> Option<Expr> {
         self.equality()
     }
 
-    fn equality(&mut self) -> Expr {
+    fn equality(&mut self) -> Option<Expr> {
         let mut expr = self.comparison();
 
         while self.r#match(&[TokenType::BangEqual, TokenType::EqualEqual]) {
             let operator = self.previous();
             let right = self.comparison();
-            expr = Expr::Binary {
-                left: Box::new(expr),
+            expr = Some(Expr::Binary {
+                left: Box::new(expr.expect("Could not evaluate left")),
                 operator,
-                right: Box::new(right),
-            }
+                right: Box::new(right.expect("Could not evaluate right")),
+            })
         }
 
         expr
     }
 
-    fn term(&mut self) -> Expr {
+    fn term(&mut self) -> Option<Expr> {
         let mut expr = self.factor();
 
         while self.r#match(&[TokenType::Minus, TokenType::Plus]) {
             let operator = self.previous();
             let right = self.factor();
-            expr = Expr::Binary {
-                left: Box::new(expr),
+            expr = Some(Expr::Binary {
+                left: Box::new(expr.unwrap()),
                 operator,
-                right: Box::new(right),
-            }
+                right: Box::new(right.unwrap()),
+            })
         }
 
         expr
@@ -100,7 +100,7 @@ impl Parser {
         self.tokens[self.current - 1].clone()
     }
 
-    fn comparison(&mut self) -> Expr {
+    fn comparison(&mut self) -> Option<Expr> {
         let mut expr = self.term();
 
         while self.r#match(&[
@@ -111,79 +111,79 @@ impl Parser {
         ]) {
             let operator = self.previous();
             let right = self.term();
-            expr = Expr::Binary {
-                left: Box::new(expr),
+            expr = Some(Expr::Binary {
+                left: Box::new(expr.expect("Could not evaluate left")),
                 operator,
-                right: Box::new(right),
-            }
+                right: Box::new(right.expect("Could not evaluate right")),
+            })
         }
 
         expr
     }
 
-    fn factor(&mut self) -> Expr {
+    fn factor(&mut self) -> Option<Expr> {
         let mut expr = self.unary();
 
         while self.r#match(&[TokenType::Slash, TokenType::Star]) {
             let operator = self.previous();
             let right = self.unary();
-            expr = Expr::Binary {
-                left: Box::new(expr),
+            expr = Some(Expr::Binary {
+                left: Box::new(expr.expect("Could not eval left")),
                 operator,
-                right: Box::new(right),
-            }
+                right: Box::new(right.expect("Could not eval right")),
+            })
         }
 
         expr
     }
 
-    fn unary(&mut self) -> Expr {
+    fn unary(&mut self) -> Option<Expr> {
         if self.r#match(&[TokenType::Bang, TokenType::Minus]) {
             let operator = self.previous();
             let right = self.unary();
-            Expr::Unary {
+            Some(Expr::Unary {
                 operator,
-                right: Box::new(right),
-            }
+                right: Box::new(right.expect("Could not evaluate right")),
+            })
         } else {
             self.primary()
         }
     }
 
-    fn primary(&mut self) -> Expr {
+    fn primary(&mut self) -> Option<Expr> {
         if self.r#match(&[TokenType::False]) {
-            return Expr::Literal {
+            return Some(Expr::Literal {
                 value: Object::Bool(false),
-            };
+            });
         }
 
         if self.r#match(&[TokenType::True]) {
-            return Expr::Literal {
+            return Some(Expr::Literal {
                 value: Object::Bool(true),
-            };
+            });
         }
 
         if self.r#match(&[TokenType::Nil]) {
-            return Expr::Literal { value: Object::Nil };
+            return Some(Expr::Literal { value: Object::Nil });
         }
 
         if self.r#match(&[TokenType::Number, TokenType::String]) {
-            return Expr::Literal {
+            return Some(Expr::Literal {
                 value: self.previous().literal.unwrap(),
-            };
+            });
         }
 
         if self.r#match(&[TokenType::LeftParen]) {
             let expr = self.expression();
             self.consume(&TokenType::RightParen, "Expect ')' after expression.");
 
-            return Expr::Grouping {
-                expr: Box::new(expr),
-            };
+            return Some(Expr::Grouping {
+                expr: Box::new(expr.expect("Could not evaluate expr")),
+            });
         }
 
         self.errors.error_token(self.peek(), "Expect expression.");
-        panic!("Couldn't parse {:?}", self.peek());
+        None
     }
 
     fn consume(&mut self, token_type: &TokenType, message: &str) -> Option<Token> {

@@ -1,0 +1,12 @@
+---
+source: src/interpreter.rs
+expression: results
+---
+[
+    Err(
+        (
+            true,
+            false,
+        ),
+    ),
+]

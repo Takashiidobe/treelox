@@ -3,6 +3,7 @@ use crate::token::{Token, TokenType};
 #[derive(Default, Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub struct Errors {
     pub had_error: bool,
+    pub had_runtime_error: bool,
 }
 
 impl Errors {
