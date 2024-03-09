@@ -2,36 +2,40 @@
 source: src/parser.rs
 expression: parser.parse()
 ---
-Some(
-    Binary {
-        left: Literal {
-            value: Number(
-                15.0,
-            ),
-        },
-        operator: Token {
-            type: Minus,
-            lexeme: "-",
-            literal: None,
-            line: 1,
-        },
-        right: Binary {
-            left: Literal {
-                value: Number(
-                    3.0,
-                ),
+Ok(
+    [
+        Expression {
+            expr: Binary {
+                left: Literal {
+                    value: Number(
+                        15.0,
+                    ),
+                },
+                operator: Token {
+                    type: Minus,
+                    lexeme: "-",
+                    literal: None,
+                    line: 1,
+                },
+                right: Binary {
+                    left: Literal {
+                        value: Number(
+                            3.0,
+                        ),
+                    },
+                    operator: Token {
+                        type: Star,
+                        lexeme: "*",
+                        literal: None,
+                        line: 1,
+                    },
+                    right: Literal {
+                        value: Number(
+                            4.0,
+                        ),
+                    },
+                },
             },
-            operator: Token {
-                type: Star,
-                lexeme: "*",
-                literal: None,
-                line: 1,
-            },
-            right: Literal {
-                value: Number(
-                    4.0,
-                ),
-            },
         },
-    },
+    ],
 )

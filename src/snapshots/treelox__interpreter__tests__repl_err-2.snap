@@ -1,0 +1,15 @@
+---
+source: src/interpreter.rs
+expression: expressions
+---
+Err(
+    Runtime {
+        token: Token {
+            type: Var,
+            lexeme: "var",
+            literal: None,
+            line: 1,
+        },
+        message: "Expected expression",
+    },
+)

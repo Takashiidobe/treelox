@@ -1,0 +1,16 @@
+---
+source: tests/cli.rs
+expression: cmd.arg(path).assert()
+input_file: test-files/assign.lox
+---
+Assert {
+    output: Output {
+        status: ExitStatus(
+            unix_wait_status(
+                0,
+            ),
+        ),
+        stdout: "15\n",
+        stderr: "",
+    },
+}

@@ -1,0 +1,9 @@
+---
+source: src/expr.rs
+expression: res
+---
+[
+    Ok(
+        "(* (- 123) 45.67)",
+    ),
+]

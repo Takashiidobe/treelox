@@ -1,6 +1,6 @@
 ---
 source: src/interpreter.rs
-expression: statements
+expression: expressions
 ---
 Err(
     Parse {

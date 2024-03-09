@@ -120,11 +120,7 @@ pub enum Object {
 
 impl Object {
     pub fn is_truthy(&self) -> bool {
-        match self {
-            Object::Bool(false) => false,
-            Object::Nil => false,
-            _ => true,
-        }
+        !matches!(self, Object::Bool(false) | Object::Nil)
     }
 }
 

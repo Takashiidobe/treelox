@@ -20,7 +20,7 @@ expression: tokens
         line: 1,
     },
     Token {
-        type: EqualEqual,
+        type: Equal,
         lexeme: "=",
         literal: None,
         line: 1,
@@ -58,7 +58,7 @@ expression: tokens
         line: 2,
     },
     Token {
-        type: Less,
+        type: LessEqual,
         lexeme: "<=",
         literal: None,
         line: 2,
@@ -96,7 +96,7 @@ expression: tokens
         line: 3,
     },
     Token {
-        type: EqualEqual,
+        type: Equal,
         lexeme: "=",
         literal: None,
         line: 3,

@@ -2,8 +2,12 @@
 source: src/parser.rs
 expression: parser.parse()
 ---
-Some(
-    Literal {
-        value: Nil,
-    },
+Ok(
+    [
+        Expression {
+            expr: Literal {
+                value: Nil,
+            },
+        },
+    ],
 )

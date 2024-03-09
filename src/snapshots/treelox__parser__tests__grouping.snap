@@ -2,38 +2,42 @@
 source: src/parser.rs
 expression: parser.parse()
 ---
-Some(
-    Binary {
-        left: Grouping {
+Ok(
+    [
+        Expression {
             expr: Binary {
-                left: Literal {
-                    value: Number(
-                        5.0,
-                    ),
+                left: Grouping {
+                    expr: Binary {
+                        left: Literal {
+                            value: Number(
+                                5.0,
+                            ),
+                        },
+                        operator: Token {
+                            type: Minus,
+                            lexeme: "-",
+                            literal: None,
+                            line: 1,
+                        },
+                        right: Literal {
+                            value: Number(
+                                3.0,
+                            ),
+                        },
+                    },
                 },
                 operator: Token {
-                    type: Minus,
-                    lexeme: "-",
+                    type: Star,
+                    lexeme: "*",
                     literal: None,
                     line: 1,
                 },
                 right: Literal {
                     value: Number(
-                        3.0,
+                        4.0,
                     ),
                 },
             },
         },
-        operator: Token {
-            type: Star,
-            lexeme: "*",
-            literal: None,
-            line: 1,
-        },
-        right: Literal {
-            value: Number(
-                4.0,
-            ),
-        },
-    },
+    ],
 )

@@ -4,13 +4,6 @@ expression: results
 ---
 [
     Ok(
-        Number(
-            200.0,
-        ),
-    ),
-    Ok(
-        Number(
-            -740.0,
-        ),
+        (),
     ),
 ]

@@ -1,121 +1,70 @@
-use std::{
-    fs::read_to_string,
-    io::{self, Write},
-    process,
-};
+use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    expr::{Expr, Visitor},
-    parser::Parser,
-    scanner::Scanner,
+    environment::Environment,
+    error::Error,
+    expr::{expr, Expr},
+    stmt::{stmt, Stmt},
     token::{Object, Token, TokenType},
 };
 
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct Interpreter {
-    args: Vec<String>,
-    had_error: bool,
-    had_runtime_error: bool,
+    environment: Rc<RefCell<Environment>>,
 }
 
 impl Interpreter {
-    pub fn new(args: Vec<String>) -> Self {
-        Self {
-            args,
-            ..Default::default()
-        }
+    pub fn new() -> Self {
+        Default::default()
     }
 
-    pub fn execute(&mut self) {
-        match self.args.len() {
-            1 => self.run_prompt(),
-            2 => self.run_file(self.args[1].to_string()).unwrap(),
-            _ => {
-                eprintln!("Usage: treelox [path]");
-                process::exit(64);
-            }
-        }
-    }
-
-    fn run_prompt(&mut self) {
-        loop {
-            let mut line = String::new();
-
-            print!("> ");
-            io::stdout().flush().unwrap();
-
-            if let Err(e) = io::stdin().read_line(&mut line) {
-                eprintln!("{}", e);
-                break;
-            }
-
-            let _ = self.run(line.clone());
-        }
-    }
-
-    fn run_file(&mut self, path: String) -> Result<(), io::Error> {
-        let source = read_to_string(path)?;
-        let run_result = self.run(source);
-        if let Err(()) = run_result {
-            if self.had_error {
-                process::exit(65);
-            }
-            if self.had_runtime_error {
-                process::exit(70);
-            }
+    pub fn interpret(&mut self, statements: &Vec<Stmt>) -> Result<(), Error> {
+        for statement in statements {
+            self.execute(statement)?;
         }
         Ok(())
     }
 
-    fn run(&mut self, source: String) -> Result<(), ()> {
-        let run_result = self.run_result(source);
-        match run_result {
-            Ok(obj) => {
-                println!("{}", obj);
-                Ok(())
-            }
-            Err((compile_time_err, runtime_err)) => {
-                if compile_time_err {
-                    self.had_error = compile_time_err;
-                }
-                if runtime_err {
-                    self.had_runtime_error = runtime_err;
-                }
-                Err(())
-            }
+    pub fn interpret_expressions(&mut self, expressions: &Vec<Expr>) -> Result<(), Error> {
+        for expression in expressions {
+            println!("{}", self.evaluate(expression)?);
         }
+        Ok(())
     }
 
-    fn run_result(&mut self, source: String) -> Result<Object, (bool, bool)> {
-        let mut scanner = Scanner::new(source);
-        let tokens = scanner.scan_tokens();
-        let mut parser = Parser::new(tokens);
-        let expr = parser.parse();
+    fn evaluate(&mut self, expression: &Expr) -> Result<Object, Error> {
+        expression.accept(self)
+    }
 
-        match expr {
-            Some(parsed_expr) => {
-                let value = self.evaluate(&parsed_expr);
-                match value {
-                    Some(res) => Ok(res),
-                    None => {
-                        self.had_runtime_error = true;
-                        Err((false, true))
-                    }
-                }
+    fn execute(&mut self, statement: &Stmt) -> Result<(), Error> {
+        statement.accept(self)
+    }
+
+    fn execute_block(
+        &mut self,
+        statements: &[Stmt],
+        environment: Environment,
+    ) -> Result<(), Error> {
+        let previous = self.environment.clone();
+        let steps = || -> Result<(), Error> {
+            self.environment = Rc::new(RefCell::new(environment));
+            for statement in statements {
+                self.execute(statement)?
             }
-            None => {
-                self.had_error = true;
-                Err((true, false))
-            }
-        }
+            Ok(())
+        };
+        let result = steps();
+        self.environment = previous;
+        result
     }
 
-    fn evaluate(&self, expr: &Expr) -> Option<Object> {
-        expr.accept(self)
-    }
-
-    fn runtime_error(&self, left: &Object, operator: &Token, right: &Object) -> Option<Object> {
-        match operator.r#type {
+    fn runtime_error(
+        &self,
+        left: &Object,
+        operator: &Token,
+        right: &Object,
+    ) -> Result<Object, Error> {
+        let message = match operator.r#type {
             TokenType::Minus
             | TokenType::Slash
             | TokenType::Star
@@ -123,115 +72,218 @@ impl Interpreter {
             | TokenType::GreaterEqual
             | TokenType::Less
             | TokenType::LessEqual => {
-                eprintln!(
+                format!(
                     "Operands must be numbers. Was: {} {} {}",
                     left, operator, right
-                );
+                )
             }
             TokenType::Plus => {
-                eprintln!(
+                format!(
                     "Operands must be two numbers or two strings. Was: {} {} {}",
                     left, operator, right
-                );
+                )
             }
             _ => {
-                eprintln!(
+                format!(
                     "Invalid expression error. Was: {} {} {}",
                     left, operator, right
-                );
+                )
             }
-        }
-        None
+        };
+        Err(Error::Runtime {
+            token: operator.clone(),
+            message,
+        })
     }
 }
 
-impl Visitor<Option<Object>> for Interpreter {
-    fn visit_binary_expr(&self, left: &Expr, operator: &Token, right: &Expr) -> Option<Object> {
+impl expr::Visitor<Object> for Interpreter {
+    fn visit_binary_expr(
+        &mut self,
+        left: &Expr,
+        operator: &Token,
+        right: &Expr,
+    ) -> Result<Object, Error> {
         let left = self
             .evaluate(left)
-            .unwrap_or_else(|| panic!("Could not evaluate left expr: {:?}", left));
+            .unwrap_or_else(|_| panic!("Could not evaluate left expr: {:?}", left));
         let right = self
             .evaluate(right)
-            .unwrap_or_else(|| panic!("Could not evaluate right expr: {:?}", right));
+            .unwrap_or_else(|_| panic!("Could not evaluate right expr: {:?}", right));
 
         match (&left, &operator.r#type, &right) {
             (Object::Number(left_num), TokenType::Minus, Object::Number(right_num)) => {
-                Some(Object::Number(left_num - right_num))
+                Ok(Object::Number(left_num - right_num))
             }
             (Object::Number(left_num), TokenType::Slash, Object::Number(0.0)) => {
-                eprintln!("Zero division error. Tried to divide {} by 0.", left_num);
-                None
+                Err(Error::Runtime {
+                    token: operator.clone(),
+                    message: format!("Zero division error. Tried to divide {} by 0.", left_num),
+                })
             }
             (Object::Number(left_num), TokenType::Slash, Object::Number(right_num)) => {
-                Some(Object::Number(left_num / right_num))
+                Ok(Object::Number(left_num / right_num))
             }
             (Object::Number(left_num), TokenType::Star, Object::Number(right_num)) => {
-                Some(Object::Number(left_num * right_num))
+                Ok(Object::Number(left_num * right_num))
             }
             (Object::Number(left_num), TokenType::Plus, Object::Number(right_num)) => {
-                Some(Object::Number(left_num + right_num))
+                Ok(Object::Number(left_num + right_num))
             }
             (Object::String(left_str), TokenType::Plus, Object::String(right_str)) => {
-                let mut res = left_str.clone();
-                res.push_str(right_str);
-                Some(Object::String(res))
+                Ok(Object::String(left_str.to_owned() + right_str))
             }
             (Object::Number(left_num), TokenType::Greater, Object::Number(right_num)) => {
-                Some(Object::Bool(left_num > right_num))
+                Ok(Object::Bool(left_num > right_num))
             }
             (Object::Number(left_num), TokenType::GreaterEqual, Object::Number(right_num)) => {
-                Some(Object::Bool(left_num >= right_num))
+                Ok(Object::Bool(left_num >= right_num))
             }
             (Object::Number(left_num), TokenType::Less, Object::Number(right_num)) => {
-                Some(Object::Bool(left_num < right_num))
+                Ok(Object::Bool(left_num < right_num))
             }
             (Object::Number(left_num), TokenType::LessEqual, Object::Number(right_num)) => {
-                Some(Object::Bool(left_num <= right_num))
+                Ok(Object::Bool(left_num <= right_num))
             }
-            (_, TokenType::BangEqual, _) => Some(Object::Bool(left != right)),
-            (_, TokenType::EqualEqual, _) => Some(Object::Bool(left == right)),
+            (_, TokenType::BangEqual, _) => Ok(Object::Bool(left != right)),
+            (_, TokenType::EqualEqual, _) => Ok(Object::Bool(left == right)),
             _ => self.runtime_error(&left, operator, &right),
         }
     }
 
-    fn visit_grouping_expr(&self, expr: &Expr) -> Option<Object> {
+    fn visit_grouping_expr(&mut self, expr: &Expr) -> Result<Object, Error> {
         self.evaluate(expr)
     }
 
-    fn visit_literal_expr(&self, value: &Object) -> Option<Object> {
-        Some(value.clone())
+    fn visit_literal_expr(&self, value: &Object) -> Result<Object, Error> {
+        Ok(value.clone())
     }
 
-    fn visit_unary_expr(&self, operator: &Token, right: &Expr) -> Option<Object> {
-        let right = self.evaluate(right);
+    fn visit_unary_expr(&mut self, operator: &Token, right: &Expr) -> Result<Object, Error> {
+        let right = self.evaluate(right)?;
 
-        match (operator.r#type.clone(), right.unwrap()) {
-            (TokenType::Minus, Object::Number(num)) => Some(Object::Number(-num)),
-            (TokenType::Bang, obj) => Some(Object::Bool(!obj.is_truthy())),
-            _ => unreachable!(),
+        match (operator.r#type.clone(), right.clone()) {
+            (TokenType::Minus, Object::Number(num)) => Ok(Object::Number(-num)),
+            (TokenType::Bang, obj) => Ok(Object::Bool(!obj.is_truthy())),
+            _ => Err(Error::Runtime {
+                token: operator.clone(),
+                message: format!("invalid unary expr: {:?}{:?}", operator, right),
+            }),
         }
+    }
+
+    fn visit_variable_expr(&self, name: &Token) -> Result<Object, Error> {
+        self.environment.borrow().get(name)
+    }
+
+    fn visit_assign_expr(&mut self, name: &Token, value: &Expr) -> Result<Object, Error> {
+        let value = self.evaluate(value)?;
+        if let Some(Object::String(_)) = name.literal.clone() {
+            self.environment.borrow_mut().assign(name, value.clone())?
+        }
+        Ok(value)
+    }
+}
+
+impl stmt::Visitor<()> for Interpreter {
+    fn visit_block_stmt(&mut self, statements: &[Stmt]) -> Result<(), Error> {
+        self.execute_block(statements, Environment::from(&self.environment))?;
+        Ok(())
+    }
+
+    fn visit_expression_stmt(&mut self, expression: &Expr) -> Result<(), Error> {
+        match self.evaluate(expression) {
+            Ok(_) => Ok(()),
+            Err(e) => Err(e),
+        }
+    }
+
+    fn visit_print_stmt(&mut self, expression: &Expr) -> Result<(), Error> {
+        match self.evaluate(expression) {
+            Ok(value) => {
+                println!("{}", value);
+                Ok(())
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    fn visit_var_stmt(&mut self, name: &Token, initializer: &Option<Expr>) -> Result<(), Error> {
+        let value: Object = initializer
+            .as_ref()
+            .map(|i| self.evaluate(i))
+            .unwrap_or(Ok(Object::Nil))?;
+
+        self.environment.borrow_mut().define(name, value);
+        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::interpreter::Interpreter;
+    use crate::parser::Parser;
+    use crate::scanner::Scanner;
+
     use insta::assert_debug_snapshot;
+
+    macro_rules! test_source_file {
+        ($name:ident, $source:expr) => {
+            #[test]
+            fn $name() {
+                let mut scanner = Scanner::new($source.to_string());
+                let tokens = scanner.scan_tokens();
+
+                let mut parser = Parser::new(tokens);
+                let statements = parser.parse();
+                match statements {
+                    Ok(statements) => {
+                        let mut interpreter = Interpreter::new();
+
+                        let mut results = vec![];
+
+                        for statement in statements {
+                            results.push(interpreter.execute(&statement));
+                        }
+                        assert_debug_snapshot!(results);
+                    }
+                    Err(_) => assert_debug_snapshot!(statements),
+                }
+            }
+        };
+    }
+
+    test_source_file!(grouping_math, "var x = (40 - 30) * 20;");
+    test_source_file!(error, "(40");
 
     macro_rules! test_repl {
         ($name:ident, $source:expr) => {
             #[test]
             fn $name() {
-                let mut interpreter = Interpreter::new(vec!["treelox".to_string()]);
+                let mut interpreter = Interpreter::new();
                 let mut results = vec![];
-                for src in $source {
-                    results.push(interpreter.run_result(src.to_string()));
+                for line in $source {
+                    let mut scanner = Scanner::new(line.to_string());
+                    let tokens = scanner.scan_tokens();
+
+                    let mut parser = Parser::new(tokens);
+                    let expressions = parser.parse_exprs();
+                    match expressions {
+                        Ok(exprs) => {
+                            for expr in exprs {
+                                dbg!(&interpreter);
+                                results.push(interpreter.evaluate(&expr));
+                            }
+
+                            assert_debug_snapshot!(results);
+                        }
+                        Err(_) => assert_debug_snapshot!(expressions),
+                    }
                 }
-                assert_debug_snapshot!(results);
             }
         };
     }
 
-    test_repl!(grouping_math, &["(40 - 30) * 20", "60 - 20 * 40"]);
-    test_repl!(error, &["(40 "]);
+    test_repl!(var_assign, &["var x = (40 - 30) * 20;", "print x;"]);
+    test_repl!(repl_err, &["(40", "var x = 10;", "print x;"]);
 }

@@ -20,7 +20,7 @@ expression: tokens
         line: 1,
     },
     Token {
-        type: EqualEqual,
+        type: Equal,
         lexeme: "=",
         literal: None,
         line: 1,

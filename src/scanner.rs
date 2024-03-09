@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
-use crate::errors::Errors;
-use crate::token::{Object, Token, TokenType};
+use crate::{
+    error::error,
+    token::{Object, Token, TokenType},
+};
 
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct Scanner {
@@ -10,7 +12,6 @@ pub struct Scanner {
     pub start: usize,
     pub current: usize,
     pub line: usize,
-    pub errors: Errors,
     pub keywords: HashMap<String, TokenType>,
 }
 
@@ -85,12 +86,12 @@ impl Scanner {
             }
             '"' => self.string(),
             '0'..='9' => self.number(),
-            _ => self.errors.error(self.line, "Unexpected character."),
+            _ => error(self.line, "Unexpected character."),
         }
     }
 
     fn add_relational_token(&mut self, one_char_token: TokenType, two_char_token: TokenType) {
-        let token_to_add = if self.r#match('=') {
+        let token_to_add = if !self.r#match('=') {
             one_char_token
         } else {
             two_char_token
@@ -144,7 +145,7 @@ impl Scanner {
     }
 
     fn string(&mut self) {
-        while self.peek() != '"' && self.is_at_end() {
+        while self.peek() != '"' && !self.is_at_end() {
             if self.peek() == '\n' {
                 self.line += 1;
             }
@@ -152,7 +153,7 @@ impl Scanner {
         }
 
         if self.is_at_end() {
-            self.errors.error(self.line, "Unterminated string.");
+            error(self.line, "Unterminated string.");
             return;
         }
 
