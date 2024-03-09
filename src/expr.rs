@@ -27,6 +27,11 @@ pub enum Expr {
     Variable {
         name: Token,
     },
+    Logical {
+        left: Box<Expr>,
+        operator: Token,
+        right: Box<Expr>,
+    },
 }
 
 pub mod expr {
@@ -49,6 +54,12 @@ pub mod expr {
         fn visit_unary_expr(&mut self, operator: &Token, right: &Expr) -> Result<R, Error>;
         fn visit_variable_expr(&self, name: &Token) -> Result<R, Error>;
         fn visit_assign_expr(&mut self, name: &Token, value: &Expr) -> Result<R, Error>;
+        fn visit_logical_expr(
+            &mut self,
+            left: &Expr,
+            operator: &Token,
+            right: &Expr,
+        ) -> Result<R, Error>;
     }
 }
 
@@ -65,6 +76,11 @@ impl Expr {
             Expr::Literal { value } => visitor.visit_literal_expr(value),
             Expr::Unary { operator, right } => visitor.visit_unary_expr(operator, right),
             Expr::Variable { name } => visitor.visit_variable_expr(name),
+            Expr::Logical {
+                left,
+                operator,
+                right,
+            } => visitor.visit_logical_expr(left, operator, right),
         }
     }
 }
@@ -117,6 +133,15 @@ impl expr::Visitor<String> for AstPrinter {
 
     fn visit_assign_expr(&mut self, name: &Token, value: &Expr) -> Result<String, Error> {
         self.parenthesize(name.lexeme.clone(), &[value])
+    }
+
+    fn visit_logical_expr(
+        &mut self,
+        left: &Expr,
+        name: &Token,
+        right: &Expr,
+    ) -> Result<String, Error> {
+        self.parenthesize(name.lexeme.clone(), &[left, right])
     }
 }
 

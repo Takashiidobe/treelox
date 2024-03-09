@@ -183,6 +183,23 @@ impl expr::Visitor<Object> for Interpreter {
         }
         Ok(value)
     }
+
+    fn visit_logical_expr(
+        &mut self,
+        left: &Expr,
+        operator: &Token,
+        right: &Expr,
+    ) -> Result<Object, Error> {
+        let left = self.evaluate(left)?;
+        if operator.r#type == TokenType::Or {
+            if left.is_truthy() {
+                return Ok(left);
+            }
+        } else if !left.is_truthy() {
+            return Ok(left);
+        }
+        self.evaluate(right)
+    }
 }
 
 impl stmt::Visitor<()> for Interpreter {
@@ -215,6 +232,28 @@ impl stmt::Visitor<()> for Interpreter {
             .unwrap_or(Ok(Object::Nil))?;
 
         self.environment.borrow_mut().define(name, value);
+        Ok(())
+    }
+
+    fn visit_if_stmt(
+        &mut self,
+        condition: &Expr,
+        then_branch: &Stmt,
+        else_branch: &Option<Stmt>,
+    ) -> Result<(), Error> {
+        if self.evaluate(condition).is_ok_and(|obj| obj.is_truthy()) {
+            self.execute(then_branch)
+        } else if else_branch.is_some() {
+            self.execute(else_branch.as_ref().unwrap())
+        } else {
+            Ok(())
+        }
+    }
+
+    fn visit_while_stmt(&mut self, condition: &Expr, body: &Stmt) -> Result<(), Error> {
+        while self.evaluate(condition).is_ok_and(|obj| obj.is_truthy()) {
+            self.execute(body)?
+        }
         Ok(())
     }
 }
