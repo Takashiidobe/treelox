@@ -2,6 +2,7 @@ use std::convert;
 use std::fmt;
 use std::io;
 
+use crate::token::Object;
 use crate::token::{Token, TokenType};
 
 pub fn error(line: usize, message: &str) {
@@ -25,6 +26,7 @@ pub enum Error {
     Io(io::Error),
     Parse { token: Token, message: String },
     Runtime { token: Token, message: String },
+    Return { value: Object },
 }
 
 impl fmt::Display for Error {
@@ -37,6 +39,7 @@ impl fmt::Display for Error {
             Error::Runtime { token, message } => {
                 write!(f, "RuntimeError at token: {}, message: {}", token, message)
             }
+            Error::Return { value } => write!(f, "Return {:?}", value),
         }
     }
 }

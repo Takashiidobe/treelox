@@ -1,5 +1,7 @@
 use std::fmt;
 
+use crate::function::Function;
+
 #[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TokenType {
     // Single character tokens
@@ -48,7 +50,7 @@ pub enum TokenType {
     Eof,
 }
 
-#[derive(Default, Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Default, Debug, Clone, PartialEq)]
 pub struct Token {
     pub r#type: TokenType,
     pub lexeme: String,
@@ -108,14 +110,28 @@ impl fmt::Display for Token {
 }
 
 #[non_exhaustive]
-#[derive(Default, Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Default, Debug, Clone)]
 pub enum Object {
     String(String),
     Number(f64),
     Identifier(String),
     Bool(bool),
+    Callable(Function),
     #[default]
     Nil,
+}
+
+impl PartialEq for Object {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Object::Nil, Object::Nil) => true,
+            (_, Object::Nil) | (Object::Nil, _) => false,
+            (Object::Bool(left), Object::Bool(right)) => left == right,
+            (Object::Number(left), Object::Number(right)) => left == right,
+            (Object::String(left), Object::String(right)) => left == right,
+            _ => false,
+        }
+    }
 }
 
 impl Object {
@@ -132,6 +148,7 @@ impl fmt::Display for Object {
             Object::Identifier(ident) => f.write_str(ident),
             Object::Bool(b) => f.write_str(&b.to_string()),
             Object::Nil => f.write_str("nil"),
+            Object::Callable(_) => f.write_str("callable"),
         }
     }
 }

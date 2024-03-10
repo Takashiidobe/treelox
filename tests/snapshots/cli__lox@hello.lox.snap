@@ -1,0 +1,16 @@
+---
+source: tests/cli.rs
+expression: cmd.arg(path).assert()
+input_file: test-files/hello.lox
+---
+Assert {
+    output: Output {
+        status: ExitStatus(
+            unix_wait_status(
+                0,
+            ),
+        ),
+        stdout: "Hi, Dear Reader!\n",
+        stderr: "",
+    },
+}

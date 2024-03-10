@@ -5,7 +5,7 @@ use crate::{
     token::{Object, Token, TokenType},
 };
 
-#[derive(Default, Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Default, Debug, Clone, PartialEq)]
 pub struct Parser {
     tokens: Vec<Token>,
     current: usize,
@@ -40,7 +40,9 @@ impl Parser {
     }
 
     fn declaration(&mut self) -> Result<Stmt, Error> {
-        let statement = if self.r#match(&[TokenType::Var]) {
+        let statement = if self.r#match(&[TokenType::Fun]) {
+            self.function("function")
+        } else if self.r#match(&[TokenType::Var]) {
             self.var_declaration()
         } else if self.r#match(&[TokenType::If]) {
             self.if_statement()
@@ -80,6 +82,8 @@ impl Parser {
     fn statement(&mut self) -> Result<Stmt, Error> {
         if self.r#match(&[TokenType::Print]) {
             self.print_statement()
+        } else if self.r#match(&[TokenType::Return]) {
+            self.return_statement()
         } else if self.r#match(&[TokenType::For]) {
             self.for_statement()
         } else if self.r#match(&[TokenType::While]) {
@@ -91,6 +95,18 @@ impl Parser {
         } else {
             self.expression_statement()
         }
+    }
+
+    fn return_statement(&mut self) -> Result<Stmt, Error> {
+        let keyword = self.previous();
+        let value = if !self.check(&TokenType::Semicolon) {
+            Some(self.expression()?)
+        } else {
+            None
+        };
+
+        self.consume(&TokenType::Semicolon, "Expect ';' after return value.");
+        Ok(Stmt::Return { keyword, value })
     }
 
     fn for_statement(&mut self) -> Result<Stmt, Error> {
@@ -184,6 +200,40 @@ impl Parser {
         let expr = self.expression()?;
         self.consume(&TokenType::Semicolon, "Expect ';' after value.")?;
         Ok(Stmt::Expression { expr })
+    }
+
+    fn function(&mut self, kind: &str) -> Result<Stmt, Error> {
+        let name = self.consume(&TokenType::Identifier, &format!("Expect {kind} name."))?;
+        self.consume(
+            &TokenType::LeftParen,
+            &format!("Expect '(' after {kind} name."),
+        )?;
+
+        let mut params = vec![];
+
+        if !self.check(&TokenType::RightParen) {
+            loop {
+                if params.len() >= 255 {
+                    self.error(&self.peek(), "Cannot have more than 255 parameters.");
+                }
+                params.push(self.consume(&TokenType::Identifier, "Expect parameter name.")?);
+
+                if !self.r#match(&[TokenType::Comma]) {
+                    break;
+                }
+            }
+        }
+
+        self.consume(&TokenType::RightParen, "Expect ')' after parameters.")?;
+
+        self.consume(
+            &TokenType::LeftBrace,
+            &format!("Expect '{{' before {} body.", kind),
+        )?;
+
+        let body = self.block()?;
+
+        Ok(Stmt::Function { name, params, body })
     }
 
     fn block(&mut self) -> Result<Vec<Stmt>, Error> {
@@ -324,8 +374,46 @@ impl Parser {
                 right: Box::new(right),
             })
         } else {
-            self.primary()
+            self.call()
         }
+    }
+
+    fn finish_call(&mut self, callee: Expr) -> Result<Expr, Error> {
+        let mut arguments = vec![];
+
+        if !self.check(&TokenType::RightParen) {
+            loop {
+                arguments.push(self.expression()?);
+                if arguments.len() >= 255 {
+                    self.error(&self.peek(), "Can't have more than 255 arguments.");
+                }
+                if !self.r#match(&[TokenType::Comma]) {
+                    break;
+                }
+            }
+        }
+
+        let paren = self.consume(&TokenType::RightParen, "Expect ')' after arguments.")?;
+
+        Ok(Expr::Call {
+            callee: Box::new(callee),
+            paren,
+            arguments,
+        })
+    }
+
+    fn call(&mut self) -> Result<Expr, Error> {
+        let mut expr = self.primary()?;
+
+        loop {
+            if self.r#match(&[TokenType::LeftParen]) {
+                expr = self.finish_call(expr)?;
+            } else {
+                break;
+            }
+        }
+
+        Ok(expr)
     }
 
     fn primary(&mut self) -> Result<Expr, Error> {

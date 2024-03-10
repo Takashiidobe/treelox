@@ -1,21 +1,57 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{
+    cell::RefCell,
+    rc::Rc,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use crate::{
     environment::Environment,
     error::Error,
     expr::{expr, Expr},
+    function::Function,
     stmt::{stmt, Stmt},
     token::{Object, Token, TokenType},
 };
 
-#[derive(Default, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Interpreter {
+    pub globals: Rc<RefCell<Environment>>,
     environment: Rc<RefCell<Environment>>,
+}
+
+impl Default for Interpreter {
+    fn default() -> Self {
+        let globals = Rc::new(RefCell::new(Environment::new()));
+        let clock: Object = Object::Callable(Function::Native {
+            arity: 0,
+            body: Box::new(|_: &[Object]| {
+                Object::Number(
+                    SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .expect("Could not retrieve time.")
+                        .as_millis() as f64,
+                )
+            }),
+        });
+        globals.borrow_mut().define(
+            &Token {
+                r#type: TokenType::Fun,
+                lexeme: "clock".to_string(),
+                literal: None,
+                line: 0,
+            },
+            clock,
+        );
+        Interpreter {
+            globals: Rc::clone(&globals),
+            environment: Rc::clone(&globals),
+        }
+    }
 }
 
 impl Interpreter {
     pub fn new() -> Self {
-        Default::default()
+        Self::default()
     }
 
     pub fn interpret(&mut self, statements: &Vec<Stmt>) -> Result<(), Error> {
@@ -40,14 +76,14 @@ impl Interpreter {
         statement.accept(self)
     }
 
-    fn execute_block(
+    pub(crate) fn execute_block(
         &mut self,
         statements: &[Stmt],
-        environment: Environment,
+        environment: Rc<RefCell<Environment>>,
     ) -> Result<(), Error> {
         let previous = self.environment.clone();
         let steps = || -> Result<(), Error> {
-            self.environment = Rc::new(RefCell::new(environment));
+            self.environment = environment;
             for statement in statements {
                 self.execute(statement)?
             }
@@ -200,11 +236,50 @@ impl expr::Visitor<Object> for Interpreter {
         }
         self.evaluate(right)
     }
+
+    fn visit_call_expr(
+        &mut self,
+        callee: &Expr,
+        paren: &Token,
+        arguments: &[Expr],
+    ) -> Result<Object, Error> {
+        let callee = self.evaluate(callee)?;
+
+        let mut args = vec![];
+
+        for argument in arguments {
+            args.push(self.evaluate(argument)?);
+        }
+
+        if let Object::Callable(function) = callee {
+            let arg_count = args.len();
+            if arg_count != function.arity() {
+                Err(Error::Runtime {
+                    token: paren.clone(),
+                    message: format!(
+                        "Expected {} arguments but got {}.",
+                        function.arity(),
+                        arg_count
+                    ),
+                })
+            } else {
+                function.call(self, &args)
+            }
+        } else {
+            Err(Error::Runtime {
+                token: paren.clone(),
+                message: "Can only call functions and classes.".to_string(),
+            })
+        }
+    }
 }
 
 impl stmt::Visitor<()> for Interpreter {
     fn visit_block_stmt(&mut self, statements: &[Stmt]) -> Result<(), Error> {
-        self.execute_block(statements, Environment::from(&self.environment))?;
+        self.execute_block(
+            statements,
+            Rc::new(RefCell::new(Environment::from(&self.environment))),
+        )?;
         Ok(())
     }
 
@@ -255,6 +330,36 @@ impl stmt::Visitor<()> for Interpreter {
             self.execute(body)?
         }
         Ok(())
+    }
+
+    fn visit_function_stmt(
+        &mut self,
+        name: &Token,
+        params: &[Token],
+        body: &[Stmt],
+    ) -> Result<(), Error> {
+        let function = Function::User {
+            name: Box::new(name.clone()),
+            params: params.to_vec(),
+            body: body.to_vec(),
+            closure: Rc::clone(&self.environment),
+        };
+        self.environment
+            .borrow_mut()
+            .define(name, Object::Callable(function));
+        Ok(())
+    }
+
+    fn visit_return_stmt(&mut self, _keyword: &Token, value: &Option<Expr>) -> Result<(), Error> {
+        let return_value = if let Some(val) = value {
+            self.evaluate(val)?
+        } else {
+            Object::Nil
+        };
+
+        Err(Error::Return {
+            value: return_value,
+        })
     }
 }
 

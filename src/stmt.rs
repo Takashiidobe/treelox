@@ -1,7 +1,7 @@
 use crate::error::Error;
 use crate::{expr::Expr, token::Token};
 
-#[derive(Default, Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Default, Debug, Clone, PartialEq)]
 pub enum Stmt {
     Block {
         statements: Vec<Stmt>,
@@ -9,12 +9,21 @@ pub enum Stmt {
     Expression {
         expr: Expr,
     },
+    Function {
+        name: Token,
+        params: Vec<Token>,
+        body: Vec<Stmt>,
+    },
     Print {
         expr: Expr,
     },
     Var {
         name: Token,
         initializer: Option<Expr>,
+    },
+    Return {
+        keyword: Token,
+        value: Option<Expr>,
     },
     If {
         condition: Expr,
@@ -46,6 +55,13 @@ pub mod stmt {
             else_branch: &Option<Stmt>,
         ) -> Result<R, Error>;
         fn visit_while_stmt(&mut self, condition: &Expr, body: &Stmt) -> Result<R, Error>;
+        fn visit_function_stmt(
+            &mut self,
+            name: &Token,
+            params: &[Token],
+            body: &[Stmt],
+        ) -> Result<R, Error>;
+        fn visit_return_stmt(&mut self, keyword: &Token, value: &Option<Expr>) -> Result<R, Error>;
     }
 }
 
@@ -63,6 +79,10 @@ impl Stmt {
             } => visitor.visit_if_stmt(condition, then_branch, else_branch),
             Stmt::While { condition, body } => visitor.visit_while_stmt(condition, body),
             Stmt::Null => unimplemented!(),
+            Stmt::Function { name, params, body } => {
+                visitor.visit_function_stmt(name, params, body)
+            }
+            Stmt::Return { keyword, value } => visitor.visit_return_stmt(keyword, value),
         }
     }
 }

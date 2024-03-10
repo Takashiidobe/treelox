@@ -19,7 +19,7 @@ enum Input {
 impl Lox {
     fn new() -> Self {
         Lox {
-            interpreter: Interpreter::default(),
+            interpreter: Interpreter::new(),
         }
     }
 
@@ -73,7 +73,7 @@ fn main() -> Result<(), Error> {
             Ok(_) => (),
             Err(Error::Runtime { .. }) => exit(70),
             Err(Error::Parse { .. }) => exit(65),
-            Err(Error::Io(_)) => unimplemented!(),
+            Err(Error::Io(_)) | Err(Error::Return { .. }) => unimplemented!(),
         },
         [_] => lox.run_prompt()?,
         _ => {

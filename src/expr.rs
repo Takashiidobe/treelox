@@ -3,7 +3,7 @@ use crate::{
     token::{Object, Token},
 };
 
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     Assign {
         name: Token,
@@ -31,6 +31,11 @@ pub enum Expr {
         left: Box<Expr>,
         operator: Token,
         right: Box<Expr>,
+    },
+    Call {
+        callee: Box<Expr>,
+        paren: Token,
+        arguments: Vec<Expr>,
     },
 }
 
@@ -60,6 +65,12 @@ pub mod expr {
             operator: &Token,
             right: &Expr,
         ) -> Result<R, Error>;
+        fn visit_call_expr(
+            &mut self,
+            callee: &Expr,
+            paren: &Token,
+            arguments: &[Expr],
+        ) -> Result<R, Error>;
     }
 }
 
@@ -81,6 +92,11 @@ impl Expr {
                 operator,
                 right,
             } => visitor.visit_logical_expr(left, operator, right),
+            Expr::Call {
+                callee,
+                paren,
+                arguments,
+            } => visitor.visit_call_expr(callee, paren, arguments),
         }
     }
 }
@@ -120,7 +136,7 @@ impl expr::Visitor<String> for AstPrinter {
     }
 
     fn visit_literal_expr(&self, value: &Object) -> Result<String, Error> {
-        Ok(value.to_string()) // check for null
+        Ok(value.to_string())
     }
 
     fn visit_unary_expr(&mut self, operator: &Token, right: &Expr) -> Result<String, Error> {
@@ -142,6 +158,16 @@ impl expr::Visitor<String> for AstPrinter {
         right: &Expr,
     ) -> Result<String, Error> {
         self.parenthesize(name.lexeme.clone(), &[left, right])
+    }
+    fn visit_call_expr(
+        &mut self,
+        callee: &Expr,
+        paren: &Token,
+        arguments: &[Expr],
+    ) -> Result<String, Error> {
+        let mut aggregated = vec![callee];
+        aggregated.extend(arguments.iter());
+        self.parenthesize(paren.lexeme.clone(), &aggregated)
     }
 }
 
