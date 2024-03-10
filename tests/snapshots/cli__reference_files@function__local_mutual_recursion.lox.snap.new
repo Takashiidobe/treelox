@@ -1,0 +1,9 @@
+---
+source: tests/cli.rs
+assertion_line: 40
+expression: test_output
+input_file: test-files/function/local_mutual_recursion.lox
+---
+status: 70
+stdout: []
+stderr: []

@@ -57,7 +57,7 @@ pub mod expr {
         fn visit_grouping_expr(&mut self, expr: &Expr) -> Result<R, Error>;
         fn visit_literal_expr(&self, value: &Object) -> Result<R, Error>;
         fn visit_unary_expr(&mut self, operator: &Token, right: &Expr) -> Result<R, Error>;
-        fn visit_variable_expr(&self, name: &Token) -> Result<R, Error>;
+        fn visit_variable_expr(&mut self, name: &Token) -> Result<R, Error>;
         fn visit_assign_expr(&mut self, name: &Token, value: &Expr) -> Result<R, Error>;
         fn visit_logical_expr(
             &mut self,
@@ -143,7 +143,7 @@ impl expr::Visitor<String> for AstPrinter {
         self.parenthesize(operator.lexeme.clone(), &[right])
     }
 
-    fn visit_variable_expr(&self, name: &Token) -> Result<String, Error> {
+    fn visit_variable_expr(&mut self, name: &Token) -> Result<String, Error> {
         Ok(name.lexeme.clone())
     }
 

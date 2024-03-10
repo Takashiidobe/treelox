@@ -1,0 +1,11 @@
+---
+source: tests/cli.rs
+expression: test_output
+input_file: test-files/assignment/associativity.lox
+---
+status: 0
+stdout:
+  - c
+  - c
+  - c
+stderr: []

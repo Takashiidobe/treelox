@@ -1,0 +1,14 @@
+---
+source: tests/cli.rs
+assertion_line: 40
+expression: test_output
+input_file: test-files/if/truth.lox
+---
+status: 0
+stdout:
+  - "false"
+  - nil
+  - "true"
+  - "0"
+  - empty
+stderr: []

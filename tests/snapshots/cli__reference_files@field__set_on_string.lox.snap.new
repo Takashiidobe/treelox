@@ -1,0 +1,10 @@
+---
+source: tests/cli.rs
+assertion_line: 40
+expression: test_output
+input_file: test-files/field/set_on_string.lox
+---
+status: 65
+stdout: []
+stderr:
+  - "[line 1] Error at '.': Expect ';' after value."

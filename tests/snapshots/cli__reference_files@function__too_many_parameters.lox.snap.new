@@ -1,0 +1,10 @@
+---
+source: tests/cli.rs
+assertion_line: 40
+expression: test_output
+input_file: test-files/function/too_many_parameters.lox
+---
+status: 0
+stdout: []
+stderr:
+  - "[line 257] Error at 'a': Cannot have more than 255 parameters."

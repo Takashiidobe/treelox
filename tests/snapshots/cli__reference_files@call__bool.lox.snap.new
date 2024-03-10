@@ -1,0 +1,9 @@
+---
+source: tests/cli.rs
+assertion_line: 40
+expression: test_output
+input_file: test-files/call/bool.lox
+---
+status: 70
+stdout: []
+stderr: []

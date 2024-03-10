@@ -1,0 +1,12 @@
+---
+source: tests/cli.rs
+expression: test_output
+input_file: test-files/assignment/global.lox
+---
+status: 0
+stdout:
+  - before
+  - after
+  - arg
+  - arg
+stderr: []

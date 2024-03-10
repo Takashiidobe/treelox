@@ -1,0 +1,10 @@
+---
+source: tests/cli.rs
+expression: test_output
+input_file: test-files/assignment/syntax.lox
+---
+status: 0
+stdout:
+  - var
+  - var
+stderr: []

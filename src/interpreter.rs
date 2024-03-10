@@ -1,5 +1,6 @@
 use std::{
     cell::RefCell,
+    collections::HashMap,
     rc::Rc,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -17,6 +18,7 @@ use crate::{
 pub struct Interpreter {
     pub globals: Rc<RefCell<Environment>>,
     environment: Rc<RefCell<Environment>>,
+    locals: HashMap<Token, usize>,
 }
 
 impl Default for Interpreter {
@@ -45,6 +47,7 @@ impl Default for Interpreter {
         Interpreter {
             globals: Rc::clone(&globals),
             environment: Rc::clone(&globals),
+            locals: HashMap::new(),
         }
     }
 }
@@ -74,6 +77,18 @@ impl Interpreter {
 
     fn execute(&mut self, statement: &Stmt) -> Result<(), Error> {
         statement.accept(self)
+    }
+
+    pub(crate) fn resolve(&mut self, name: &Token, depth: usize) {
+        self.locals.insert(name.clone(), depth);
+    }
+
+    fn look_up_variable(&self, name: &Token) -> Result<Object, Error> {
+        if let Some(distance) = self.locals.get(name) {
+            self.environment.borrow().get_at(*distance, name)
+        } else {
+            self.globals.borrow().get(name)
+        }
     }
 
     pub(crate) fn execute_block(
@@ -208,14 +223,18 @@ impl expr::Visitor<Object> for Interpreter {
         }
     }
 
-    fn visit_variable_expr(&self, name: &Token) -> Result<Object, Error> {
-        self.environment.borrow().get(name)
+    fn visit_variable_expr(&mut self, name: &Token) -> Result<Object, Error> {
+        self.look_up_variable(name)
     }
 
     fn visit_assign_expr(&mut self, name: &Token, value: &Expr) -> Result<Object, Error> {
         let value = self.evaluate(value)?;
-        if let Some(Object::String(_)) = name.literal.clone() {
-            self.environment.borrow_mut().assign(name, value.clone())?
+        if let Some(distance) = self.locals.get(name) {
+            self.environment
+                .borrow_mut()
+                .assign_at(*distance, name, value.clone())?;
+        } else {
+            self.environment.borrow_mut().assign(name, value.clone())?;
         }
         Ok(value)
     }

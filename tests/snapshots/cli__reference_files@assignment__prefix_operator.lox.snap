@@ -1,0 +1,9 @@
+---
+source: tests/cli.rs
+expression: test_output
+input_file: test-files/assignment/prefix_operator.lox
+---
+status: 65
+stdout: []
+stderr:
+  - "[line 2] Error at '=': Invalid assignment target."

@@ -1,0 +1,10 @@
+---
+source: tests/cli.rs
+assertion_line: 40
+expression: test_output
+input_file: test-files/closure/reference_closure_multiple_times.lox
+---
+status: 65
+stdout: []
+stderr:
+  - "[line 5] Error at '_': Expect '(' after function name."

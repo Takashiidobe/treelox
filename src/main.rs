@@ -5,6 +5,7 @@ use std::process::exit;
 use treelox::error::Error;
 use treelox::interpreter::Interpreter;
 use treelox::parser::Parser;
+use treelox::resolver::Resolver;
 use treelox::scanner::Scanner;
 
 struct Lox {
@@ -46,6 +47,7 @@ impl Lox {
         let tokens = scanner.scan_tokens();
 
         let mut parser = Parser::new(tokens);
+        let mut resolver = Resolver::new(&mut self.interpreter);
         match input {
             Input::Repl => match parser.parse_exprs() {
                 Ok(expressions) => {
@@ -53,11 +55,13 @@ impl Lox {
                 }
                 Err(_) => {
                     let statements = parser.parse()?;
+                    resolver.resolve_stmts(&statements)?;
                     self.interpreter.interpret(&statements)?;
                 }
             },
             Input::File => {
                 let statements = parser.parse()?;
+                resolver.resolve_stmts(&statements)?;
                 self.interpreter.interpret(&statements)?;
             }
         }

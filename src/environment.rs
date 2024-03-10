@@ -60,6 +60,60 @@ impl Environment {
             })
         }
     }
+
+    fn ancestor(&self, distance: usize) -> Rc<RefCell<Environment>> {
+        let rc = self
+            .enclosing
+            .clone()
+            .unwrap_or_else(|| panic!("No enclosing environment at {}", 1));
+        let parent = rc;
+        let mut environment = Rc::clone(&parent);
+
+        for i in 1..distance {
+            let parent = self
+                .enclosing
+                .clone()
+                .unwrap_or_else(|| panic!("No enclosing environment at {}", i));
+            environment = Rc::clone(&parent);
+        }
+        environment
+    }
+
+    pub(crate) fn get_at(&self, distance: usize, name: &Token) -> Result<Object, Error> {
+        let key = &*name.lexeme;
+        if distance > 0 {
+            Ok(self
+                .ancestor(distance)
+                .borrow()
+                .values
+                .get(key)
+                .unwrap_or_else(|| panic!("Undefined variable '{}'", key))
+                .clone())
+        } else {
+            Ok(self
+                .values
+                .get(key)
+                .unwrap_or_else(|| panic!("Undefined variable '{}'", key))
+                .clone())
+        }
+    }
+
+    pub(crate) fn assign_at(
+        &mut self,
+        distance: usize,
+        name: &Token,
+        value: Object,
+    ) -> Result<(), Error> {
+        if distance > 0 {
+            self.ancestor(distance)
+                .borrow_mut()
+                .values
+                .insert(name.lexeme.clone(), value);
+        } else {
+            self.values.insert(name.lexeme.clone(), value);
+        }
+        Ok(())
+    }
 }
 
 impl fmt::Display for Environment {

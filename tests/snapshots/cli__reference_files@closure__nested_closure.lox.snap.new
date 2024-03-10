@@ -1,0 +1,12 @@
+---
+source: tests/cli.rs
+assertion_line: 40
+expression: test_output
+input_file: test-files/closure/nested_closure.lox
+---
+status: 101
+stdout: []
+stderr:
+  - "thread 'main' panicked at src/environment.rs:90:36:"
+  - "Undefined variable 'a'"
+  - "note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace"

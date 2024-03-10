@@ -1,0 +1,9 @@
+---
+source: tests/cli.rs
+assertion_line: 40
+expression: test_output
+input_file: test-files/closure/close_over_method_parameter.lox
+---
+status: 70
+stdout: []
+stderr: []

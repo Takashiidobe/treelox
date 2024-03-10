@@ -1,0 +1,10 @@
+---
+source: tests/cli.rs
+assertion_line: 40
+expression: test_output
+input_file: test-files/expressions/parse.lox
+---
+status: 65
+stdout: []
+stderr:
+  - "[line 4] Error at end: Expect ';' after value."

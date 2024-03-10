@@ -1,0 +1,11 @@
+---
+source: tests/cli.rs
+assertion_line: 40
+expression: test_output
+input_file: test-files/closure/close_over_later_variable.lox
+---
+status: 0
+stdout:
+  - b
+  - a
+stderr: []

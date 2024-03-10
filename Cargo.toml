@@ -10,3 +10,4 @@ authors = ["Takashi Idobe <idobetakashi@gmail.com>"]
 assert_cmd = "2.0.14"
 insta = { version = "1.35.1", features = ["yaml", "glob"] }
 insta-cmd = "0.5.0"
+serde = { version = "1.0.197", features = ["derive"] }

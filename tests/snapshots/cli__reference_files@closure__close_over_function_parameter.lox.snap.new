@@ -1,0 +1,10 @@
+---
+source: tests/cli.rs
+assertion_line: 40
+expression: test_output
+input_file: test-files/closure/close_over_function_parameter.lox
+---
+status: 65
+stdout: []
+stderr:
+  - "[line 4] Error at '_': Expect '(' after function name."

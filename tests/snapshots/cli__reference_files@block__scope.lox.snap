@@ -1,0 +1,10 @@
+---
+source: tests/cli.rs
+expression: test_output
+input_file: test-files/block/scope.lox
+---
+status: 0
+stdout:
+  - inner
+  - outer
+stderr: []

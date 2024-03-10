@@ -1,4 +1,7 @@
-use std::fmt;
+use std::{
+    fmt,
+    hash::{Hash, Hasher},
+};
 
 use crate::function::Function;
 
@@ -57,6 +60,15 @@ pub struct Token {
     pub literal: Option<Object>,
     pub line: usize,
 }
+
+impl Hash for Token {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.lexeme.hash(state);
+        self.line.hash(state);
+    }
+}
+
+impl Eq for Token {}
 
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
