@@ -7,6 +7,6 @@ input_file: test-files/for/scope.lox
 status: 101
 stdout: []
 stderr:
-  - "thread 'main' panicked at src/environment.rs:90:36:"
+  - "thread 'main' panicked at src/environment.rs:91:36:"
   - "Undefined variable 'i'"
   - "note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace"

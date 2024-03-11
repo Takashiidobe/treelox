@@ -34,6 +34,10 @@ pub enum Stmt {
         condition: Expr,
         body: Box<Stmt>,
     },
+    Class {
+        name: Token,
+        methods: Vec<Stmt>,
+    },
     #[default]
     Null,
 }
@@ -62,6 +66,7 @@ pub mod stmt {
             body: &[Stmt],
         ) -> Result<R, Error>;
         fn visit_return_stmt(&mut self, keyword: &Token, value: &Option<Expr>) -> Result<R, Error>;
+        fn visit_class_stmt(&mut self, name: &Token, methods: &[Stmt]) -> Result<R, Error>;
     }
 }
 
@@ -83,6 +88,7 @@ impl Stmt {
                 visitor.visit_function_stmt(name, params, body)
             }
             Stmt::Return { keyword, value } => visitor.visit_return_stmt(keyword, value),
+            Stmt::Class { name, methods } => visitor.visit_class_stmt(name, methods),
         }
     }
 }

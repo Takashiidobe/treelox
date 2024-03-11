@@ -4,6 +4,10 @@ assertion_line: 40
 expression: test_output
 input_file: test-files/field/get_and_set_method.lox
 ---
-status: 70
-stdout: []
+status: 0
+stdout:
+  - method
+  - "1"
+  - method
+  - "2"
 stderr: []

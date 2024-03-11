@@ -4,6 +4,7 @@ assertion_line: 40
 expression: test_output
 input_file: test-files/closure/close_over_method_parameter.lox
 ---
-status: 70
+status: 65
 stdout: []
-stderr: []
+stderr:
+  - "[line 5] Error at '_': Expect '(' after function name."

@@ -1,3 +1,4 @@
+pub mod class;
 pub mod environment;
 pub mod error;
 pub mod expr;

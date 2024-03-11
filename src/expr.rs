@@ -14,6 +14,10 @@ pub enum Expr {
         operator: Token,
         right: Box<Expr>,
     },
+    Get {
+        object: Box<Expr>,
+        name: Token,
+    },
     Grouping {
         expr: Box<Expr>,
     },
@@ -36,6 +40,14 @@ pub enum Expr {
         callee: Box<Expr>,
         paren: Token,
         arguments: Vec<Expr>,
+    },
+    Set {
+        object: Box<Expr>,
+        name: Token,
+        value: Box<Expr>,
+    },
+    This {
+        keyword: Token,
     },
 }
 
@@ -71,6 +83,10 @@ pub mod expr {
             paren: &Token,
             arguments: &[Expr],
         ) -> Result<R, Error>;
+        fn visit_get_expr(&mut self, object: &Expr, name: &Token) -> Result<R, Error>;
+        fn visit_set_expr(&mut self, object: &Expr, name: &Token, value: &Expr)
+            -> Result<R, Error>;
+        fn visit_this_expr(&mut self, keyword: &Token) -> Result<R, Error>;
     }
 }
 
@@ -97,6 +113,13 @@ impl Expr {
                 paren,
                 arguments,
             } => visitor.visit_call_expr(callee, paren, arguments),
+            Expr::Get { object, name } => visitor.visit_get_expr(object, name),
+            Expr::Set {
+                object,
+                name,
+                value,
+            } => visitor.visit_set_expr(object, name, value),
+            Expr::This { keyword } => visitor.visit_this_expr(keyword),
         }
     }
 }
@@ -168,6 +191,23 @@ impl expr::Visitor<String> for AstPrinter {
         let mut aggregated = vec![callee];
         aggregated.extend(arguments.iter());
         self.parenthesize(paren.lexeme.clone(), &aggregated)
+    }
+
+    fn visit_get_expr(&mut self, object: &Expr, name: &Token) -> Result<String, Error> {
+        self.parenthesize(name.lexeme.clone(), &[object])
+    }
+
+    fn visit_set_expr(
+        &mut self,
+        object: &Expr,
+        name: &Token,
+        value: &Expr,
+    ) -> Result<String, Error> {
+        self.parenthesize(name.lexeme.clone(), &[object, value])
+    }
+
+    fn visit_this_expr(&mut self, _keyword: &Token) -> Result<String, Error> {
+        Ok("this".to_string())
     }
 }
 

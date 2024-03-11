@@ -44,6 +44,8 @@ impl Parser {
             self.function("function")
         } else if self.r#match(&[TokenType::Var]) {
             self.var_declaration()
+        } else if self.r#match(&[TokenType::Class]) {
+            self.class_declaration()
         } else if self.r#match(&[TokenType::If]) {
             self.if_statement()
         } else {
@@ -57,6 +59,21 @@ impl Parser {
             }
             stmt => stmt,
         }
+    }
+
+    fn class_declaration(&mut self) -> Result<Stmt, Error> {
+        let name = self.consume(&TokenType::Identifier, "Expect class name.")?;
+        self.consume(&TokenType::LeftBrace, "Expect '{' before class body.")?;
+
+        let mut methods = vec![];
+
+        while !self.check(&TokenType::RightBrace) && !self.is_at_end() {
+            methods.push(self.function("method")?);
+        }
+
+        self.consume(&TokenType::RightBrace, "Expect '}' after class body.")?;
+
+        Ok(Stmt::Class { name, methods })
     }
 
     fn if_statement(&mut self) -> Result<Stmt, Error> {
@@ -257,6 +274,13 @@ impl Parser {
 
             match expr {
                 Expr::Variable { name } => return Ok(Expr::Assign { name, value }),
+                Expr::Get { object, name } => {
+                    return Ok(Expr::Set {
+                        object,
+                        name,
+                        value,
+                    })
+                }
                 _ => return Err(self.error(equals, "Invalid assignment target.")),
             }
         }
@@ -408,6 +432,12 @@ impl Parser {
         loop {
             if self.r#match(&[TokenType::LeftParen]) {
                 expr = self.finish_call(expr)?;
+            } else if self.r#match(&[TokenType::Dot]) {
+                let name = self.consume(&TokenType::Identifier, "Expect property after '.'/")?;
+                expr = Expr::Get {
+                    object: Box::new(expr),
+                    name,
+                }
             } else {
                 break;
             }
@@ -426,6 +456,10 @@ impl Parser {
         } else if self.r#match(&[TokenType::True]) {
             Expr::Literal {
                 value: Object::Bool(true),
+            }
+        } else if self.r#match(&[TokenType::This]) {
+            Expr::This {
+                keyword: self.peek().clone(),
             }
         } else if self.r#match(&[TokenType::Nil]) {
             Expr::Literal { value: Object::Nil }

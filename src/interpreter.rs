@@ -6,6 +6,7 @@ use std::{
 };
 
 use crate::{
+    class::{Class, Instance},
     environment::Environment,
     error::Error,
     expr::{expr, Expr},
@@ -270,26 +271,83 @@ impl expr::Visitor<Object> for Interpreter {
             args.push(self.evaluate(argument)?);
         }
 
-        if let Object::Callable(function) = callee {
-            let arg_count = args.len();
-            if arg_count != function.arity() {
-                Err(Error::Runtime {
-                    token: paren.clone(),
-                    message: format!(
-                        "Expected {} arguments but got {}.",
-                        function.arity(),
-                        arg_count
-                    ),
-                })
-            } else {
-                function.call(self, &args)
+        match callee {
+            Object::Callable(function) => {
+                let arg_count = args.len();
+                if arg_count != function.arity() {
+                    Err(Error::Runtime {
+                        token: paren.clone(),
+                        message: format!(
+                            "Expected {} arguments but got {}.",
+                            function.arity(),
+                            arg_count
+                        ),
+                    })
+                } else {
+                    function.call(self, &args)
+                }
             }
-        } else {
-            Err(Error::Runtime {
+            Object::Class(ref class) => {
+                let args_size = args.len();
+                let instance = Instance::new(class);
+                if let Some(initializer) = class.borrow().find_method("init") {
+                    if args_size != initializer.arity() {
+                        return Err(Error::Runtime {
+                            token: paren.clone(),
+                            message: format!(
+                                "Expected {} arguments but got {}.",
+                                initializer.arity(),
+                                args_size
+                            ),
+                        });
+                    }
+                    initializer.bind(instance.clone()).call(self, &args)?;
+                }
+
+                Ok(instance)
+            }
+            _ => Err(Error::Runtime {
                 token: paren.clone(),
                 message: "Can only call functions and classes.".to_string(),
+            }),
+        }
+    }
+
+    fn visit_get_expr(&mut self, object: &Expr, name: &Token) -> Result<Object, Error> {
+        let object = self.evaluate(object)?;
+        if let Object::Instance(ref instance) = object {
+            instance.borrow().get(name, &object)
+        } else {
+            Err(Error::Runtime {
+                token: name.clone(),
+                message: "Only instances have properties.".to_string(),
             })
         }
+    }
+
+    fn visit_set_expr(
+        &mut self,
+        object: &Expr,
+        name: &Token,
+        value: &Expr,
+    ) -> Result<Object, Error> {
+        let object = self.evaluate(object)?;
+
+        if let Object::Instance(ref instance) = object {
+            let value = self.evaluate(value)?;
+            instance.borrow_mut().set(name, value);
+            let r = Object::Instance(Rc::clone(instance));
+            Ok(r)
+        } else {
+            Err(Error::Runtime {
+                token: name.clone(),
+                message: "Only instances have fields.".to_string(),
+            })
+        }
+    }
+
+    fn visit_this_expr(&mut self, keyword: &Token) -> Result<Object, Error> {
+        self.look_up_variable(keyword)
     }
 }
 
@@ -362,6 +420,7 @@ impl stmt::Visitor<()> for Interpreter {
             params: params.to_vec(),
             body: body.to_vec(),
             closure: Rc::clone(&self.environment),
+            is_initializer: false,
         };
         self.environment
             .borrow_mut()
@@ -379,6 +438,34 @@ impl stmt::Visitor<()> for Interpreter {
         Err(Error::Return {
             value: return_value,
         })
+    }
+
+    fn visit_class_stmt(&mut self, name: &Token, methods: &[Stmt]) -> Result<(), Error> {
+        self.environment.borrow_mut().define(name, Object::Nil);
+
+        let mut class_methods: HashMap<String, Function> = HashMap::new();
+        for method in methods {
+            if let Stmt::Function { name, params, body } = method {
+                let function = Function::User {
+                    name: Box::new(name.clone()),
+                    params: params.clone(),
+                    body: body.clone(),
+                    closure: Rc::clone(&self.environment),
+                    is_initializer: name.lexeme == "init",
+                };
+                class_methods.insert(name.lexeme.clone(), function);
+            } else {
+                unreachable!()
+            }
+        }
+
+        let lox_class = Class {
+            name: name.lexeme.clone(),
+            methods: class_methods,
+        };
+        let class = Object::Class(Rc::new(RefCell::new(lox_class)));
+        self.environment.borrow_mut().assign(name, class)?;
+        Ok(())
     }
 }
 

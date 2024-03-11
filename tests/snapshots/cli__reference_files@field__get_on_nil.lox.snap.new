@@ -4,7 +4,6 @@ assertion_line: 40
 expression: test_output
 input_file: test-files/field/get_on_nil.lox
 ---
-status: 65
+status: 70
 stdout: []
-stderr:
-  - "[line 1] Error at '.': Expect ';' after value."
+stderr: []

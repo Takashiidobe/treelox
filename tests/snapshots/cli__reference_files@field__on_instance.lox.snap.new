@@ -5,5 +5,7 @@ expression: test_output
 input_file: test-files/field/on_instance.lox
 ---
 status: 70
-stdout: []
+stdout:
+  - Foo instance
+  - Foo instance
 stderr: []

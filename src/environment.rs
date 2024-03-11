@@ -70,7 +70,8 @@ impl Environment {
         let mut environment = Rc::clone(&parent);
 
         for i in 1..distance {
-            let parent = self
+            let parent = environment
+                .borrow()
                 .enclosing
                 .clone()
                 .unwrap_or_else(|| panic!("No enclosing environment at {}", i));

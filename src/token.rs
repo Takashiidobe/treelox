@@ -1,9 +1,14 @@
 use std::{
+    cell::RefCell,
     fmt,
     hash::{Hash, Hasher},
+    rc::Rc,
 };
 
-use crate::function::Function;
+use crate::{
+    class::{Class, Instance},
+    function::Function,
+};
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TokenType {
@@ -129,6 +134,8 @@ pub enum Object {
     Identifier(String),
     Bool(bool),
     Callable(Function),
+    Class(Rc<RefCell<Class>>),
+    Instance(Rc<RefCell<Instance>>),
     #[default]
     Nil,
 }
@@ -141,6 +148,7 @@ impl PartialEq for Object {
             (Object::Bool(left), Object::Bool(right)) => left == right,
             (Object::Number(left), Object::Number(right)) => left == right,
             (Object::String(left), Object::String(right)) => left == right,
+            (Object::Class(left), Object::Class(right)) => left == right,
             _ => false,
         }
     }
@@ -161,6 +169,10 @@ impl fmt::Display for Object {
             Object::Bool(b) => f.write_str(&b.to_string()),
             Object::Nil => f.write_str("nil"),
             Object::Callable(_) => f.write_str("callable"),
+            Object::Class(class) => write!(f, "{}", class.borrow()),
+            Object::Instance(instance) => {
+                write!(f, "{} instance", instance.borrow().class.borrow().name)
+            }
         }
     }
 }

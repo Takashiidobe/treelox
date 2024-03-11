@@ -4,12 +4,13 @@ use crate::interpreter::Interpreter;
 use crate::stmt::Stmt;
 use crate::token::Object;
 use crate::token::Token;
+use crate::token::TokenType;
 
 use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Function {
     Native {
         arity: usize,
@@ -21,6 +22,7 @@ pub enum Function {
         params: Vec<Token>,
         body: Vec<Stmt>,
         closure: Rc<RefCell<Environment>>,
+        is_initializer: bool,
     },
 }
 
@@ -36,6 +38,7 @@ impl Function {
                 params,
                 body,
                 closure,
+                is_initializer,
                 ..
             } => {
                 let environment = Rc::new(RefCell::new(Environment::from(closure)));
@@ -43,9 +46,43 @@ impl Function {
                     environment.borrow_mut().define(param, argument.clone());
                 }
                 match interpreter.execute_block(body, environment) {
-                    Err(Error::Return { value }) => Ok(value),
+                    Err(Error::Return { value }) => {
+                        if *is_initializer {
+                            Ok(closure
+                                .borrow()
+                                .get_at(
+                                    0,
+                                    &Token {
+                                        r#type: TokenType::This,
+                                        lexeme: "this".to_string(),
+                                        literal: Some(Object::Identifier("this".to_string())),
+                                        line: 0,
+                                    },
+                                )
+                                .expect("Initializer should return 'this'."))
+                        } else {
+                            Ok(value)
+                        }
+                    }
                     Err(other) => Err(other),
-                    Ok(..) => Ok(Object::Nil),
+                    Ok(..) => {
+                        if *is_initializer {
+                            Ok(closure
+                                .borrow()
+                                .get_at(
+                                    0,
+                                    &Token {
+                                        r#type: TokenType::This,
+                                        lexeme: "this".to_string(),
+                                        literal: Some(Object::Identifier("this".to_string())),
+                                        line: 0,
+                                    },
+                                )
+                                .expect("Initializer should return 'this'."))
+                        } else {
+                            Ok(Object::Nil)
+                        }
+                    }
                 }
             }
         }
@@ -55,6 +92,37 @@ impl Function {
         match self {
             Function::Native { arity, .. } => *arity,
             Function::User { params, .. } => params.len(),
+        }
+    }
+
+    pub fn bind(&self, instance: Object) -> Self {
+        match self {
+            Function::Native { .. } => unreachable!(),
+            Function::User {
+                name,
+                params,
+                body,
+                closure,
+                is_initializer,
+            } => {
+                let environment = Rc::new(RefCell::new(Environment::from(closure)));
+                environment.borrow_mut().define(
+                    &Token {
+                        r#type: TokenType::This,
+                        lexeme: "this".to_string(),
+                        literal: Some(Object::Identifier("this".to_string())),
+                        line: 0,
+                    },
+                    instance,
+                );
+                Function::User {
+                    name: name.clone(),
+                    params: params.clone(),
+                    body: body.clone(),
+                    closure: environment,
+                    is_initializer: *is_initializer,
+                }
+            }
         }
     }
 }
