@@ -56,12 +56,18 @@ impl Lox {
                 Err(_) => {
                     let statements = parser.parse()?;
                     resolver.resolve_stmts(&statements)?;
+                    if resolver.had_error {
+                        return Ok(());
+                    }
                     self.interpreter.interpret(&statements)?;
                 }
             },
             Input::File => {
                 let statements = parser.parse()?;
                 resolver.resolve_stmts(&statements)?;
+                if resolver.had_error {
+                    return Ok(());
+                }
                 self.interpreter.interpret(&statements)?;
             }
         }
@@ -75,7 +81,10 @@ fn main() -> Result<(), Error> {
     match &args[..] {
         [_, file] => match lox.run_file(file) {
             Ok(_) => (),
-            Err(Error::Runtime { .. }) => exit(70),
+            Err(Error::Runtime { message, .. }) => {
+                eprintln!("Error: {}", message);
+                exit(70)
+            }
             Err(Error::Parse { .. }) => exit(65),
             Err(Error::Io(_)) | Err(Error::Return { .. }) => unimplemented!(),
         },

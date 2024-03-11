@@ -10,11 +10,18 @@ use crate::{
 pub struct Class {
     pub name: String,
     pub methods: HashMap<String, Function>,
+    pub superclass: Option<Rc<RefCell<Class>>>,
 }
 
 impl Class {
-    pub fn find_method(&self, name: &str) -> Option<&Function> {
-        self.methods.get(name)
+    pub fn find_method(&self, name: &str) -> Option<Function> {
+        if self.methods.contains_key(name) {
+            self.methods.get(name).cloned()
+        } else if let Some(ref superclass) = self.superclass {
+            superclass.borrow().find_method(name)
+        } else {
+            None
+        }
     }
 }
 
@@ -25,7 +32,7 @@ pub struct Instance {
 }
 
 impl Instance {
-    pub fn new(class: &Rc<RefCell<Class>>) -> Object {
+    pub fn new_object(class: &Rc<RefCell<Class>>) -> Object {
         let instance = Instance {
             class: Rc::clone(class),
             fields: HashMap::new(),
@@ -34,7 +41,7 @@ impl Instance {
     }
 
     pub fn get(&self, name: &Token, instance: &Object) -> Result<Object, Error> {
-        if let Some(field) = self.fields.get(&name) {
+        if let Some(field) = self.fields.get(name) {
             Ok(field.clone())
         } else if let Some(method) = self.class.borrow().find_method(&name.lexeme) {
             Ok(Object::Callable(method.bind(instance.clone())))

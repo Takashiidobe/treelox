@@ -8,7 +8,7 @@ use std::rc::Rc;
 
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct Environment {
-    enclosing: Option<Rc<RefCell<Environment>>>, // Parent
+    pub enclosing: Option<Rc<RefCell<Environment>>>, // Parent
     values: HashMap<String, Object>,
 }
 
@@ -27,9 +27,8 @@ impl Environment {
         }
     }
 
-    pub fn define(&mut self, name: &Token, value: Object) {
-        let key = &*name.lexeme;
-        self.values.insert(key.to_string(), value);
+    pub fn define(&mut self, name: &str, value: Object) {
+        self.values.insert(name.to_string(), value);
     }
 
     pub fn get(&self, name: &Token) -> Result<Object, Error> {
@@ -80,21 +79,20 @@ impl Environment {
         environment
     }
 
-    pub(crate) fn get_at(&self, distance: usize, name: &Token) -> Result<Object, Error> {
-        let key = &*name.lexeme;
+    pub(crate) fn get_at(&self, distance: usize, name: &str) -> Result<Object, Error> {
         if distance > 0 {
             Ok(self
                 .ancestor(distance)
                 .borrow()
                 .values
-                .get(key)
-                .unwrap_or_else(|| panic!("Undefined variable '{}'", key))
+                .get(name)
+                .unwrap_or_else(|| panic!("Undefined variable '{}'", name))
                 .clone())
         } else {
             Ok(self
                 .values
-                .get(key)
-                .unwrap_or_else(|| panic!("Undefined variable '{}'", key))
+                .get(name)
+                .unwrap_or_else(|| panic!("Undefined variable '{}'", name))
                 .clone())
         }
     }

@@ -4,7 +4,6 @@ use crate::interpreter::Interpreter;
 use crate::stmt::Stmt;
 use crate::token::Object;
 use crate::token::Token;
-use crate::token::TokenType;
 
 use std::cell::RefCell;
 use std::fmt;
@@ -43,22 +42,16 @@ impl Function {
             } => {
                 let environment = Rc::new(RefCell::new(Environment::from(closure)));
                 for (param, argument) in params.iter().zip(arguments.iter()) {
-                    environment.borrow_mut().define(param, argument.clone());
+                    environment
+                        .borrow_mut()
+                        .define(&param.lexeme, argument.clone());
                 }
                 match interpreter.execute_block(body, environment) {
                     Err(Error::Return { value }) => {
                         if *is_initializer {
                             Ok(closure
                                 .borrow()
-                                .get_at(
-                                    0,
-                                    &Token {
-                                        r#type: TokenType::This,
-                                        lexeme: "this".to_string(),
-                                        literal: Some(Object::Identifier("this".to_string())),
-                                        line: 0,
-                                    },
-                                )
+                                .get_at(0, "this")
                                 .expect("Initializer should return 'this'."))
                         } else {
                             Ok(value)
@@ -69,15 +62,7 @@ impl Function {
                         if *is_initializer {
                             Ok(closure
                                 .borrow()
-                                .get_at(
-                                    0,
-                                    &Token {
-                                        r#type: TokenType::This,
-                                        lexeme: "this".to_string(),
-                                        literal: Some(Object::Identifier("this".to_string())),
-                                        line: 0,
-                                    },
-                                )
+                                .get_at(0, "this")
                                 .expect("Initializer should return 'this'."))
                         } else {
                             Ok(Object::Nil)
@@ -106,15 +91,7 @@ impl Function {
                 is_initializer,
             } => {
                 let environment = Rc::new(RefCell::new(Environment::from(closure)));
-                environment.borrow_mut().define(
-                    &Token {
-                        r#type: TokenType::This,
-                        lexeme: "this".to_string(),
-                        literal: Some(Object::Identifier("this".to_string())),
-                        line: 0,
-                    },
-                    instance,
-                );
+                environment.borrow_mut().define("this", instance);
                 Function::User {
                     name: name.clone(),
                     params: params.clone(),

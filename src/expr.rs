@@ -46,6 +46,10 @@ pub enum Expr {
         name: Token,
         value: Box<Expr>,
     },
+    Super {
+        keyword: Token,
+        method: Token,
+    },
     This {
         keyword: Token,
     },
@@ -87,6 +91,7 @@ pub mod expr {
         fn visit_set_expr(&mut self, object: &Expr, name: &Token, value: &Expr)
             -> Result<R, Error>;
         fn visit_this_expr(&mut self, keyword: &Token) -> Result<R, Error>;
+        fn visit_super_expr(&mut self, keyword: &Token, method: &Token) -> Result<R, Error>;
     }
 }
 
@@ -120,6 +125,7 @@ impl Expr {
                 value,
             } => visitor.visit_set_expr(object, name, value),
             Expr::This { keyword } => visitor.visit_this_expr(keyword),
+            Expr::Super { keyword, method } => visitor.visit_super_expr(keyword, method),
         }
     }
 }
@@ -208,6 +214,10 @@ impl expr::Visitor<String> for AstPrinter {
 
     fn visit_this_expr(&mut self, _keyword: &Token) -> Result<String, Error> {
         Ok("this".to_string())
+    }
+
+    fn visit_super_expr(&mut self, _keyword: &Token, _method: &Token) -> Result<String, Error> {
+        Ok("super".to_string())
     }
 }
 
